@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #070907; /* Light Blue */
+        }
+
+        canvas {
+            display: none;
+            border: 1px solid #4CAF50; /* Green */
+        }
+
+        #menu {
+            text-align: center;
+            color: #FFFFFF; /* White */
+            font-size: 24px;
+            background-color: #4285F4; /* Google Blue */
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #menu button {
+            background-color: #34A853; /* Google Green */
+            color: #FFFFFF; /* White */
+            font-size: 16px;
+            padding: 10px 20px;
+            margin: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #menu button:hover {
+            background-color: #2d8a5f; /* Darker Google Green on hover */
+        }
+
+        #rules {
+            margin-top: 20px;
+            color: #59d0f5; /* White */
+            font-size: 18px;
+            text-align: left;
+        }
+
+        #tryAgain,
+        #highScore {
+            display: none;
+            text-align: center;
+            color: #5897ca; /* White */
+            font-size: 24px;
+            margin-top: 20px;
+        }
+        #frogImage {
+            width: 40px; /* Set the width of the frog image */
+            height: 40px; /* Set the height of the frog image */
+        }
+        #tryAgain button,
+        #highScore button {
+            background-color: #4285F4; /* Google Blue */
+            color: #FFFFFF; /* White */
+            font-size: 16px;
+            padding: 10px 20px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #tryAgain button:hover,
+        #highScore button:hover {
+            background-color: #2d8a5f; /* Darker Google Blue on hover */
+        }
+    </style>
+    <title>Snake Game</title>
+</head>
+<body>
+    <div id="menu">
+        <p style="color: #FFD700;">Welcome to Snake Game</p>
+        <button onclick="startGame()">Start Game</button>
+        <button onclick="showHighScore()">View High Score</button>
+    </div>
+    <div>
+    <img id="frogImage" src="https://www.iconarchive.com/download/i141845/iconarchive/cute-animal/Cute-Frog.1024.png" style="display: none;" />
+    </div>
+    <div id="rules">
+        <p>Rules of the Game:</p>
+        <p>1. As the snake eats its food, its size increases.</p>
+        <p>2. The speed of the snake increases as the size of the snake increases.</p>
+        <p>3. If the snake hits the wall, the game is over.</p>
+    </div>
+
+    <canvas id="snakeCanvas" width="400" height="400"></canvas>
+
+    <div id="tryAgain">
+        <p>Game Over!</p>
+        <p id="finalScore"></p>
+        <button onclick="tryAgain()">Try Again</button>
+    </div>
+
+    <div id="highScore">
+        <p>Highest Score:</p>
+        <p id="highestScore">0</p>
+        <button onclick="hideHighScore()">Back to Menu</button>
+    </div>
+    <script>
+        const canvas = document.getElementById("snakeCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const boxSize = 20;
+        const canvasSize = 400;
+
+        let snake = [{ x: 200, y: 200 }];
+        let direction = "right";
+        let food = { x: 0, y: 0 };
+        let score = 0;
+        let highestScore = 0;
+
+        let gameRunning = false;
+
+        function draw() {
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvasSize, canvasSize);
+    
+            // Draw the snake
+            snake.forEach((segment, index) => {
+                const segmentColor = getRandomColor(); // Generate a random color for each segment
+                ctx.fillStyle = index === 0 ? "#FFD700" : segmentColor; // Gold for the head, random color for the body
+                ctx.fillRect(segment.x, segment.y, boxSize, boxSize);
+            });
+    
+            // Draw the frog (food)
+            const frogImage = document.getElementById("frogImage");
+            ctx.drawImage(frogImage, food.x, food.y, boxSize, boxSize);
+    
+            // Draw the score
+            ctx.fillStyle = "#FFFFFF"; // White
+            ctx.font = "20px Arial";
+            ctx.fillText("Score: " + score, 10, 20);
+        }
+    
+        function getRandomColor() {
+            // Generate a random color in hexadecimal format
+            const letters = "0123456789ABCDEF";
+            let color = "#";
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        function update() {
+            // Update snake position based on the current direction
+            let newX = snake[0].x;
+            let newY = snake[0].y;
+
+            if (direction === "right") newX += boxSize;
+            if (direction === "left") newX -= boxSize;
+            if (direction === "up") newY -= boxSize;
+            if (direction === "down") newY += boxSize;
+
+            // Check for collision with the walls
+            if (newX < 0 || newX >= canvasSize || newY < 0 || newY >= canvasSize) {
+                endGame();
+                return;
+            }
+
+            // Check for collision with itself
+            if (checkCollision(newX, newY, snake.slice(1))) {
+                endGame();
+                return;
+            }
+
+            // Check for collision with food
+            if (newX === food.x && newY === food.y) {
+                // Increase score and generate new food
+                score++;
+                generateFood();
+            } else {
+                // Remove the tail segment
+                snake.pop();
+            }
+
+            // Add new head segment
+            snake.unshift({ x: newX, y: newY });
+
+            // Adjust game speed based on snake length
+            const speedDelay = Math.max(100, 200 - snake.length * 10);
+            setTimeout(gameLoop, speedDelay);
+        }
+
+        function checkCollision(x, y, array) {
+            // Check if the coordinates (x, y) collide with any segment in the array
+            return array.some((segment) => segment.x === x && segment.y === y);
+        }
+
+        function generateFood() {
+            // Generate random coordinates for the frog
+            food = {
+                x: Math.floor(Math.random() * (canvasSize / boxSize)) * boxSize,
+                y: Math.floor(Math.random() * (canvasSize / boxSize)) * boxSize
+            };
+    
+            // Make sure the frog doesn't overlap with the snake
+            while (checkCollision(food.x, food.y, snake)) {
+                food = {
+                    x: Math.floor(Math.random() * (canvasSize / boxSize)) * boxSize,
+                    y: Math.floor(Math.random() * (canvasSize / boxSize)) * boxSize
+                };
+            }
+        }
+
+        function startGame() {
+            // Hide menu, show canvas, and reset game state
+            document.getElementById("menu").style.display = "none";
+            document.getElementById("tryAgain").style.display = "none";
+            document.getElementById("highScore").style.display = "none";
+            canvas.style.display = "block";
+            score = 0;
+            snake = [{ x: 200, y: 200 }];
+            direction = "right";
+            generateFood();
+            gameRunning = true;
+            gameLoop();
+        }
+
+        function endGame() {
+            // Show game over screen with final score and try again button
+            gameRunning = false;
+            canvas.style.display = "none";
+            document.getElementById("tryAgain").style.display = "block";
+            document.getElementById("finalScore").innerText = "Score: " + score;
+
+            // Update highest score
+            if (score > highestScore) {
+                highestScore = score;
+                document.getElementById("highestScore").innerText = "Highest Score: " + highestScore;
+            }
+
+            // Show menu again
+            document.getElementById("menu").style.display = "block";
+        }
+
+        function tryAgain() {
+            // Restart the game
+            startGame();
+        }
+
+        function showHighScore() {
+            // Hide menu and show high score screen
+            document.getElementById("menu").style.display = "none";
+            document.getElementById("highScore").style.display = "block";
+        }
+
+        function hideHighScore() {
+            // Hide high score screen and show menu
+            document.getElementById("highScore").style.display = "none";
+            document.getElementById("menu").style.display = "block";
+        }
+
+        function keyDownHandler(event) {
+            // Update direction based on arrow key input
+            if (gameRunning) {
+                if (event.key === "ArrowRight" && direction !== "left") direction = "right";
+                if (event.key === "ArrowLeft" && direction !== "right") direction = "left";
+                if (event.key === "ArrowUp" && direction !== "down") direction = "up";
+                if (event.key === "ArrowDown" && direction !== "up") direction = "down";
+            }
+        }
+
+        function gameLoop() {
+            if (gameRunning) {
+                update();
+                draw();
+            }
+        }
+
+        // Set up event listener for arrow key input
+        document.addEventListener("keydown", keyDownHandler);
+    </script>
+</body>
+</html>
