@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+        canvas {
+            border: 1px solid red;
+            display:block;
+            margin: 0 auto;
+        }
+        #score {
+            font-family: Arial, sans-serif;
+            font-size: 20px;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="score"><Score:1></Score:1> points</div>
+    <canvas id="gameCanvas" width="400" height="200"></canvas>
+    <script>
+        // JavaScript code for the snake game
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const GRID_SIZE = 20;
+        const GRID_WIDTH = canvas.width / GRID_SIZE;
+        const GRID_HEIGHT = canvas.height / GRID_SIZE;
+
+        let snake = [{ x: 10, y: 10 }];
+        let food = { x: 15, y: 10 };
+        let dx = 1;
+        let dy = 0;
+        let score = 0;
+
+        function draw() {
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw the snake
+            ctx.fillStyle = "voilet";
+            snake.forEach(segment => {
+                ctx.fillRect(segment.x * GRID_SIZE, segment.y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+            });
+
+            // Draw the food
+            ctx.fillStyle = " dark pink";
+            ctx.fillRect(food.x * GRID_SIZE, food.y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+        }
+
+        function moveSnake() {
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+            snake.unshift(head);
+
+            // Check if snake ate the food
+            if (head.x === food.x && head.y === food.y) {
+                score += 1; // Increase score by 10 points
+                generateFood();
+                updateScore();
+            } else {
+                snake.pop();
+            }
+        }
+
+        function generateFood() {
+            food.x = Math.floor(Math.random() * GRID_WIDTH);
+            food.y = Math.floor(Math.random() * GRID_HEIGHT);
+        }
+
+        function checkCollision() {
+            const head = snake[0];
+            return (
+                head.x < 0 ||
+                head.x >= GRID_WIDTH ||
+                head.y < 0 ||
+                head.y >= GRID_HEIGHT ||
+                snake.slice(1).some(segment => segment.x === head.x && segment.y === head.y)
+            );
+        }
+
+        function update() {
+            if (checkCollision()) {
+                alert("Game Over! Your Score: " + score + " points");
+                resetGame();
+                return;
+            }
+
+            moveSnake();
+            draw();
+        }
+
+        function resetGame() {
+            snake = [{ x: 1, y: 1 }];
+            dx = 1;
+            dy = 0;
+            score = 0;
+            generateFood();
+            updateScore();
+        }
+
+        function updateScore() {
+            document.getElementById("score").textContent = "Score: " + score + " points";
+        }
+
+        document.addEventListener("keydown", event => {
+            switch (event.key) {
+                case "ArrowLeft":
+                    if (dx === 0) {
+                        dx = -1;
+                        dy = 0;
+                    }
+                    break;
+                case "ArrowRight":
+                    if (dx === 0) {
+                        dx = 1;
+                        dy = 0;
+                    }
+                    break;
+                case "ArrowUp":
+                    if (dy === 0) {
+                        dx = 0;
+                        dy = -1;
+                    }
+                    break;
+                case "ArrowDown":
+                    if (dy === 0) {
+                        dx = 0;
+                        dy = 1;
+                    }
+                    break;
+            }
+        });
+
+        // Initial setup
+        resetGame();
+
+        // Start the game loop
+        setInterval(update, 100);
+    </script>
+</body>
+</html>
